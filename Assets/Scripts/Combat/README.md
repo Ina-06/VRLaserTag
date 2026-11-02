@@ -6,13 +6,21 @@ respawning, kills or scores.
 
 ## Local setup
 
+The quickest setup is Unity's menu command
+`VR Laser Tag > Combat > Create or Rebuild Combat Test Scene`. It creates a reusable
+`LaserGun` prefab, a `CombatTest` scene, cover and debug targets. The generated scene
+uses arrow keys or right-mouse drag to aim, left-click/Space to fire and R to reload.
+
+For manual setup:
+
 1. Add `ShotValidator` to a scene-level object.
 2. Create a gun object and add `AmmoController`, `LaserWeapon`, `WeaponInput`,
    `LocalCombatNetworkBridge` and (optionally) `WeaponEffects`.
 3. Add a child transform at the barrel tip and assign it as the weapon muzzle.
 4. Assign the scene validator to `LocalCombatNetworkBridge`.
-5. Assign Input System actions to `WeaponInput`. The fire action should be bound to
-   the controller trigger; reload may use a controller button.
+5. Optionally assign the team's Input System actions to `WeaponInput`. When no actions
+   are assigned, development fallbacks use left-click/Space/right-controller trigger
+   to fire and R/right-controller secondary button to reload.
 6. Put arena cover and player hit colliders on layers included by the validator's
    collision mask.
 7. Add `DebugDamageableTarget` to a cube/player dummy for local testing. Replace it
@@ -52,7 +60,9 @@ and score updates.
 
 Controller-specific vibration can be connected by implementing `IWeaponHaptics` and
 assigning that component to `WeaponEffects`. This keeps the module compilable before
-the team selects and installs its XR provider packages.
+the team selects and installs its XR provider packages. `InputSystemWeaponHaptics`
+provides a default adapter for rumble-capable XR controllers exposed by OpenXR or the
+selected Meta provider.
 
 ## Development disclosure
 
