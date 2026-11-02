@@ -1,6 +1,7 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using VRLaserTag.Combat;
 
@@ -97,6 +98,7 @@ namespace VRLaserTag.EditorTools
             Light light = lightObject.AddComponent<Light>();
             light.type = LightType.Directional;
             light.intensity = 1.2f;
+            lightObject.AddComponent<UniversalAdditionalLightData>();
             lightObject.transform.rotation = Quaternion.Euler(45f, -30f, 0f);
         }
 
@@ -106,7 +108,8 @@ namespace VRLaserTag.EditorTools
                 "Combat Test Camera",
                 typeof(Camera),
                 typeof(AudioListener),
-                typeof(CombatTestAimController));
+                typeof(CombatTestAimController),
+                typeof(UniversalAdditionalCameraData));
             cameraObject.tag = "MainCamera";
             cameraObject.transform.position = new Vector3(0f, 1.7f, -5f);
             cameraObject.transform.rotation = Quaternion.identity;
