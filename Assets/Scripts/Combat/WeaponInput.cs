@@ -86,12 +86,18 @@ namespace VRLaserTag.Combat
 
         private void OnFirePerformed(InputAction.CallbackContext context)
         {
-            weapon?.TryFire();
+            if (weapon != null)
+            {
+                weapon.TryFire();
+            }
         }
 
         private void OnReloadPerformed(InputAction.CallbackContext context)
         {
-            weapon?.RequestReload();
+            if (weapon != null)
+            {
+                weapon.RequestReload();
+            }
         }
 
         private static InputAction CreateFallbackFireAction()

@@ -32,7 +32,11 @@ namespace VRLaserTag.Combat
 
         public void PlayShot(Vector3 origin, ShotResult result)
         {
-            muzzleFlash?.Play();
+            if (muzzleFlash != null)
+            {
+                muzzleFlash.Play();
+            }
+
             PlayClip(fireClip);
             haptics?.Pulse(hapticAmplitude, hapticDuration);
 

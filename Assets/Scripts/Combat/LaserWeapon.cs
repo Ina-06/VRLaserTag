@@ -80,7 +80,11 @@ namespace VRLaserTag.Combat
 
             if (!ammo.TryConsumeRound())
             {
-                effects?.PlayDryFire();
+                if (effects != null)
+                {
+                    effects.PlayDryFire();
+                }
+
                 return false;
             }
 
@@ -123,7 +127,10 @@ namespace VRLaserTag.Combat
                 return;
             }
 
-            effects?.PlayShot(request.Origin, result);
+            if (effects != null)
+            {
+                effects.PlayShot(request.Origin, result);
+            }
         }
 
         private void OnValidate()
