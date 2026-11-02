@@ -15,7 +15,8 @@ respawning, kills or scores.
    the controller trigger; reload may use a controller button.
 6. Put arena cover and player hit colliders on layers included by the validator's
    collision mask.
-7. For a local target, add a component that implements `IDamageable`.
+7. Add `DebugDamageableTarget` to a cube/player dummy for local testing. Replace it
+   with the game-rules implementation during integration.
 
 The first non-shooter collider hit by the ray stops the laser. A collider without an
 `IDamageable` implementation is therefore treated as cover.
@@ -52,3 +53,9 @@ and score updates.
 Controller-specific vibration can be connected by implementing `IWeaponHaptics` and
 assigning that component to `WeaponEffects`. This keeps the module compilable before
 the team selects and installs its XR provider packages.
+
+## Development disclosure
+
+AI assistance was used to design, implement and review this combat foundation. The
+team must include that fact, the files affected and the human verification performed
+in the final contribution statement, as required by the assignment.
