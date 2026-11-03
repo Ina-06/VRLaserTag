@@ -4,7 +4,7 @@ using UnityEngine;
 public class HealthTester : MonoBehaviour
 {
     [SerializeField] private PlayerHealth playerHealth;
-    [SerializeField] private PlayerScore attackerScore;
+    [SerializeField] private PlayerIdentity attackerIdentity;
 
     [ContextMenu("Take 25 Damage")]
     public void TestDamage()
@@ -12,7 +12,12 @@ public class HealthTester : MonoBehaviour
         if (playerHealth == null)
             return;
 
-        playerHealth.TakeDamage(25, attackerScore);
+        ulong attackerId =
+            attackerIdentity != null
+                ? attackerIdentity.PlayerId
+                : 0UL;
+
+        playerHealth.TakeDamage(25, attackerId);
     }
 
     [ContextMenu("Respawn Player")]

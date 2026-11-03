@@ -12,61 +12,82 @@ public class PlayerHealth : MonoBehaviour
     public bool IsDead { get; private set; }
 
     private Coroutine respawnCoroutine;
+    private PlayerIdentity identity;
 
     private void Awake()
     {
         CurrentHealth = maxHealth;
         IsDead = false;
+
+        identity = GetComponent<PlayerIdentity>();
     }
 
     public void TakeDamage(int damage)
     {
-        TakeDamage(damage, null);
+        TakeDamage(damage, 0UL);
     }
 
-    public void TakeDamage(int damage, PlayerScore attacker)
+    public void TakeDamage(int damage, ulong attackerId)
     {
         if (matchManager == null ||
-            matchManager.CurrentState != MatchManager.MatchState.Playing)
+            matchManager.CurrentState !=
+            MatchManager.MatchState.Playing)
             return;
 
         if (IsDead || damage <= 0)
             return;
 
-        CurrentHealth = Mathf.Max(0, CurrentHealth - damage);
+        CurrentHealth = Mathf.Max(
+            0, CurrentHealth - damage
+        );
 
-        Debug.Log($"{gameObject.name} took {damage} damage. HP: {CurrentHealth}");
+        Debug.Log(
+            $"{name} took {damage} damage. " +
+            $"HP: {CurrentHealth}"
+        );
 
         if (CurrentHealth == 0)
-        {
-            if (attacker != null && attacker.gameObject != gameObject)
-                attacker.AddKill();
-
-            Die();
-        }
+            Die(attackerId);
     }
 
-    private void Die()
+    private void Die(ulong attackerId)
     {
+        if (IsDead)
+            return;
+
         IsDead = true;
 
-        PlayerScore score = GetComponent<PlayerScore>();
+        if (identity != null)
+        {
+            matchManager.ReportElimination(
+                attackerId, identity.PlayerId
+            );
+        }
+        else
+        {
+            Debug.LogError(
+                $"{name} has no PlayerIdentity!"
+            );
+        }
 
-        if (score != null)
-            score.AddDeath();
+        Debug.Log($"{name} has died!");
 
-        Debug.Log($"{gameObject.name} has died!");
+        CancelPendingRespawn();
 
-        respawnCoroutine = StartCoroutine(RespawnAfterDelay());
+        respawnCoroutine =
+            StartCoroutine(RespawnAfterDelay());
     }
 
     private IEnumerator RespawnAfterDelay()
     {
         yield return new WaitForSeconds(respawnDelay);
+
         respawnCoroutine = null;
 
-        if (matchManager != null &&
-            matchManager.CurrentState == MatchManager.MatchState.Playing)
+        if (IsDead &&
+            matchManager != null &&
+            matchManager.CurrentState ==
+            MatchManager.MatchState.Playing)
         {
             Respawn();
         }
@@ -75,29 +96,47 @@ public class PlayerHealth : MonoBehaviour
     public void Respawn()
     {
         if (matchManager == null ||
-            matchManager.CurrentState != MatchManager.MatchState.Playing)
+            matchManager.CurrentState !=
+            MatchManager.MatchState.Playing)
             return;
 
+        if (!IsDead)
+            return;
+
+        CancelPendingRespawn();
+
         RestoreHealth();
-        Debug.Log($"{gameObject.name} respawned with {CurrentHealth} HP.");
+
+        Debug.Log(
+            $"{name} respawned with {CurrentHealth} HP."
+        );
     }
 
     public void ResetForNewMatch()
     {
-        if (respawnCoroutine != null)
-        {
-            StopCoroutine(respawnCoroutine);
-            respawnCoroutine = null;
-        }
-
+        CancelPendingRespawn();
         RestoreHealth();
 
-        Debug.Log($"{gameObject.name} reset to {CurrentHealth} HP.");
+        Debug.Log($"{name} reset to {CurrentHealth} HP.");
     }
 
     private void RestoreHealth()
     {
         CurrentHealth = maxHealth;
         IsDead = false;
+    }
+
+    private void CancelPendingRespawn()
+    {
+        if (respawnCoroutine == null)
+            return;
+
+        StopCoroutine(respawnCoroutine);
+        respawnCoroutine = null;
+    }
+
+    private void OnDisable()
+    {
+        CancelPendingRespawn();
     }
 }

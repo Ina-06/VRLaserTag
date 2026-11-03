@@ -148,10 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9fbc31a6d3ccdda489c6248846ba4079, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MatchManager
-  matchDuration: 10
-  players:
-  - {fileID: 669234354}
-  - {fileID: 1914609163}
+  matchDuration: 300
 --- !u!4 &50903982
 Transform:
   m_ObjectHideFlags: 0
@@ -388,6 +385,7 @@ GameObject:
   - component: {fileID: 669234353}
   - component: {fileID: 669234352}
   - component: {fileID: 669234354}
+  - component: {fileID: 669234355}
   m_Layer: 0
   m_Name: TestPlayer
   m_TagString: Untagged
@@ -503,7 +501,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthTester
   playerHealth: {fileID: 669234353}
-  attackerScore: {fileID: 1914609163}
+  attackerIdentity: {fileID: 1914609164}
 --- !u!114 &669234353
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -517,7 +515,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
   maxHealth: 100
-  respawnDelay: 15
+  respawnDelay: 3
   matchManager: {fileID: 50903981}
 --- !u!114 &669234354
 MonoBehaviour:
@@ -531,6 +529,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b184893d7cc4b6144897a4bd22123bda, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerScore
+--- !u!114 &669234355
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 669234347}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 956ecd4d9f9edbd4ea3115ab2021066e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerIdentity
+  offlinePlayerId: 1
 --- !u!1 &961739749
 GameObject:
   m_ObjectHideFlags: 0
@@ -818,6 +829,7 @@ GameObject:
   - component: {fileID: 1914609160}
   - component: {fileID: 1914609159}
   - component: {fileID: 1914609163}
+  - component: {fileID: 1914609164}
   m_Layer: 0
   m_Name: Attacker
   m_TagString: Untagged
@@ -932,6 +944,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b184893d7cc4b6144897a4bd22123bda, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerScore
+--- !u!114 &1914609164
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1914609158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 956ecd4d9f9edbd4ea3115ab2021066e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerIdentity
+  offlinePlayerId: 2
 --- !u!1 &1971854613
 GameObject:
   m_ObjectHideFlags: 0
