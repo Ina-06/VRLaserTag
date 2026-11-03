@@ -82,7 +82,7 @@ namespace VRLaserTag.Combat
                 typeof(Image));
             canvasObject.transform.SetParent(transform, false);
             canvasObject.transform.localPosition = new Vector3(0f, 0.16f, 0.03f);
-            canvasObject.transform.localRotation = Quaternion.Euler(20f, 180f, 0f);
+            canvasObject.transform.localRotation = Quaternion.Euler(20f, 0f, 0f);
             canvasObject.transform.localScale = Vector3.one * 0.0005f;
 
             RectTransform canvasRect = canvasObject.GetComponent<RectTransform>();
