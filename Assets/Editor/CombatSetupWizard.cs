@@ -13,7 +13,87 @@ namespace VRLaserTag.EditorTools
         private const string PrefabFolder = "Assets/Prefabs/Combat";
         private const string MaterialFolder = "Assets/Materials/Combat";
         private const string ScenePath = SceneFolder + "/CombatTest.unity";
+        private const string ArenaScenePath = "Assets/Scenes/ArenaTest.unity";
+        private const string IntegrationScenePath =
+            SceneFolder + "/ArenaCombatIntegration.unity";
         private const string PrefabPath = PrefabFolder + "/LaserGun.prefab";
+
+        [MenuItem("VR Laser Tag/Combat/Create Arena Combat Integration Scene")]
+        public static void CreateArenaCombatIntegrationScene()
+        {
+            if (!Application.isBatchMode &&
+                !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            {
+                return;
+            }
+
+            EnsureFolder(SceneFolder);
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ArenaScenePath) == null)
+            {
+                Debug.LogError($"Arena scene was not found at {ArenaScenePath}.");
+                return;
+            }
+
+            GameObject gunPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
+            if (gunPrefab == null)
+            {
+                Debug.LogError(
+                    "LaserGun prefab is missing. Run 'Create or Rebuild Combat Test Scene' first.");
+                return;
+            }
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(IntegrationScenePath) != null)
+            {
+                AssetDatabase.DeleteAsset(IntegrationScenePath);
+            }
+
+            if (!AssetDatabase.CopyAsset(ArenaScenePath, IntegrationScenePath))
+            {
+                Debug.LogError("Unity could not copy the arena integration scene.");
+                return;
+            }
+
+            Scene scene = EditorSceneManager.OpenScene(
+                IntegrationScenePath,
+                OpenSceneMode.Single);
+            GameObject integrationRoot = new GameObject("Combat Integration");
+
+            GameObject validatorObject = new GameObject("Shot Validator");
+            validatorObject.transform.SetParent(integrationRoot.transform, false);
+            validatorObject.AddComponent<ShotValidator>();
+
+            GameObject gun = (GameObject)PrefabUtility.InstantiatePrefab(gunPrefab, scene);
+            gun.name = "Local XR Laser Gun";
+            gun.transform.SetParent(integrationRoot.transform, false);
+            if (gun.GetComponent<XRWeaponHandBinder>() == null)
+            {
+                gun.AddComponent<XRWeaponHandBinder>();
+            }
+
+            if (gun.GetComponent<WeaponAmmoDisplay>() == null)
+            {
+                gun.AddComponent<WeaponAmmoDisplay>();
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, IntegrationScenePath);
+            AssetDatabase.SaveAssets();
+            Selection.activeGameObject = gun;
+
+            const string instructions =
+                "ArenaCombatIntegration was created without changing ArenaTest. " +
+                "Enter Play Mode with the XR rig: right trigger fires, the right " +
+                "secondary button reloads, and the weapon display shows ammunition.";
+
+            if (Application.isBatchMode)
+            {
+                Debug.Log(instructions);
+            }
+            else
+            {
+                EditorUtility.DisplayDialog("Arena combat integration created", instructions, "OK");
+            }
+        }
 
         [MenuItem("VR Laser Tag/Combat/Create or Rebuild Combat Test Scene")]
         public static void CreateCombatTestScene()
@@ -143,6 +223,7 @@ namespace VRLaserTag.EditorTools
             LineRenderer tracer = gun.AddComponent<LineRenderer>();
             LaserWeapon weapon = gun.AddComponent<LaserWeapon>();
             gun.AddComponent<WeaponInput>();
+            gun.AddComponent<WeaponAmmoDisplay>();
 
             tracer.material = laserMaterial;
             tracer.startWidth = 0.025f;

@@ -11,6 +11,14 @@ The quickest setup is Unity's menu command
 `LaserGun` prefab, a `CombatTest` scene, cover and debug targets. The generated scene
 uses arrow keys or right-mouse drag to aim, left-click/Space to fire and R to reload.
 
+After the arena branch is present, run
+`VR Laser Tag > Combat > Create Arena Combat Integration Scene`. This copies the
+team's `ArenaTest` into a combat-owned `ArenaCombatIntegration` scene, adds the local
+laser gun and shot validator, and leaves the original arena scene unchanged. In Play
+Mode, `XRWeaponHandBinder` attaches the gun to the local XR Origin's right controller.
+The right trigger fires, the right secondary button reloads, and a world-space display
+shows current ammunition or reload state.
+
 For manual setup:
 
 1. Add `ShotValidator` to a scene-level object.
