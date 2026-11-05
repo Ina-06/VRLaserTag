@@ -1,36 +1,80 @@
 
 using System.Collections;
 using UnityEngine;
+using VRLaserTag.Combat;
 
-public class PlayerHealth : MonoBehaviour
+[RequireComponent(typeof(PlayerIdentity))]
+[RequireComponent(typeof(PlayerScore))]
+public class PlayerHealth : MonoBehaviour, IDamageable, ICombatantState
 {
+    [Header("Health Settings")]
     [SerializeField] private int maxHealth = 100;
     [SerializeField] private float respawnDelay = 3f;
+
+    [Header("Game Rules")]
     [SerializeField] private MatchManager matchManager;
+
+    private PlayerIdentity identity;
+    private Coroutine respawnCoroutine;
 
     public int CurrentHealth { get; private set; }
     public bool IsDead { get; private set; }
 
-    private Coroutine respawnCoroutine;
-    private PlayerIdentity identity;
+    // Required by Combat: IDamageable
+    public bool IsAlive => !IsDead;
+
+    // Required by Combat: ICombatantState
+    public ulong PlayerId =>
+        identity != null ? identity.PlayerId : 0UL;
+
+    public bool CanFire =>
+        !IsDead &&
+        GetMatchManager() != null &&
+        GetMatchManager().CurrentState ==
+        MatchManager.MatchState.Playing;
 
     private void Awake()
     {
+        identity = GetComponent<PlayerIdentity>();
+
         CurrentHealth = maxHealth;
         IsDead = false;
-
-        identity = GetComponent<PlayerIdentity>();
     }
 
+    private MatchManager GetMatchManager()
+    {
+        if (matchManager == null)
+            matchManager = MatchManager.Instance;
+
+        return matchManager;
+    }
+
+    // Called by Combat's ShotValidator.
+    public void ApplyDamage(DamageInfo damage)
+    {
+        TakeDamage(damage.Amount, damage.AttackerId);
+    }
+
+    // Existing local testing method.
     public void TakeDamage(int damage)
     {
         TakeDamage(damage, 0UL);
     }
 
+    // ID-based damage handling.
     public void TakeDamage(int damage, ulong attackerId)
     {
-        if (matchManager == null ||
-            matchManager.CurrentState !=
+        MatchManager manager = GetMatchManager();
+
+        if (manager == null)
+        {
+            Debug.LogError(
+                $"{name}: MatchManager not found!"
+            );
+            return;
+        }
+
+        if (manager.CurrentState !=
             MatchManager.MatchState.Playing)
             return;
 
@@ -57,16 +101,12 @@ public class PlayerHealth : MonoBehaviour
 
         IsDead = true;
 
-        if (identity != null)
+        MatchManager manager = GetMatchManager();
+
+        if (manager != null && identity != null)
         {
-            matchManager.ReportElimination(
+            manager.ReportElimination(
                 attackerId, identity.PlayerId
-            );
-        }
-        else
-        {
-            Debug.LogError(
-                $"{name} has no PlayerIdentity!"
             );
         }
 
@@ -84,9 +124,11 @@ public class PlayerHealth : MonoBehaviour
 
         respawnCoroutine = null;
 
+        MatchManager manager = GetMatchManager();
+
         if (IsDead &&
-            matchManager != null &&
-            matchManager.CurrentState ==
+            manager != null &&
+            manager.CurrentState ==
             MatchManager.MatchState.Playing)
         {
             Respawn();
@@ -95,8 +137,10 @@ public class PlayerHealth : MonoBehaviour
 
     public void Respawn()
     {
-        if (matchManager == null ||
-            matchManager.CurrentState !=
+        MatchManager manager = GetMatchManager();
+
+        if (manager == null ||
+            manager.CurrentState !=
             MatchManager.MatchState.Playing)
             return;
 
@@ -104,7 +148,6 @@ public class PlayerHealth : MonoBehaviour
             return;
 
         CancelPendingRespawn();
-
         RestoreHealth();
 
         Debug.Log(
@@ -117,7 +160,9 @@ public class PlayerHealth : MonoBehaviour
         CancelPendingRespawn();
         RestoreHealth();
 
-        Debug.Log($"{name} reset to {CurrentHealth} HP.");
+        Debug.Log(
+            $"{name} reset to {CurrentHealth} HP."
+        );
     }
 
     private void RestoreHealth()
