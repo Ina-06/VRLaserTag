@@ -5,7 +5,8 @@ using VRLaserTag.Combat;
 
 [RequireComponent(typeof(PlayerIdentity))]
 [RequireComponent(typeof(PlayerScore))]
-public class PlayerHealth : MonoBehaviour, IDamageable, ICombatantState
+public class PlayerHealth : MonoBehaviour,
+    IDamageable, ICombatantState
 {
     [Header("Health Settings")]
     [SerializeField] private int maxHealth = 100;
@@ -14,16 +15,16 @@ public class PlayerHealth : MonoBehaviour, IDamageable, ICombatantState
     [Header("Game Rules")]
     [SerializeField] private MatchManager matchManager;
 
+    [Header("Arena Respawning")]
+    [SerializeField] private ArenaSpawnManager spawnManager;
+
     private PlayerIdentity identity;
     private Coroutine respawnCoroutine;
 
     public int CurrentHealth { get; private set; }
     public bool IsDead { get; private set; }
-
-    // Required by Combat: IDamageable
     public bool IsAlive => !IsDead;
 
-    // Required by Combat: ICombatantState
     public ulong PlayerId =>
         identity != null ? identity.PlayerId : 0UL;
 
@@ -36,7 +37,6 @@ public class PlayerHealth : MonoBehaviour, IDamageable, ICombatantState
     private void Awake()
     {
         identity = GetComponent<PlayerIdentity>();
-
         CurrentHealth = maxHealth;
         IsDead = false;
     }
@@ -49,32 +49,22 @@ public class PlayerHealth : MonoBehaviour, IDamageable, ICombatantState
         return matchManager;
     }
 
-    // Called by Combat's ShotValidator.
     public void ApplyDamage(DamageInfo damage)
     {
         TakeDamage(damage.Amount, damage.AttackerId);
     }
 
-    // Existing local testing method.
     public void TakeDamage(int damage)
     {
         TakeDamage(damage, 0UL);
     }
 
-    // ID-based damage handling.
     public void TakeDamage(int damage, ulong attackerId)
     {
         MatchManager manager = GetMatchManager();
 
-        if (manager == null)
-        {
-            Debug.LogError(
-                $"{name}: MatchManager not found!"
-            );
-            return;
-        }
-
-        if (manager.CurrentState !=
+        if (manager == null ||
+            manager.CurrentState !=
             MatchManager.MatchState.Playing)
             return;
 
@@ -86,8 +76,7 @@ public class PlayerHealth : MonoBehaviour, IDamageable, ICombatantState
         );
 
         Debug.Log(
-            $"{name} took {damage} damage. " +
-            $"HP: {CurrentHealth}"
+            $"{name} took {damage} damage. HP: {CurrentHealth}"
         );
 
         if (CurrentHealth == 0)
@@ -148,6 +137,10 @@ public class PlayerHealth : MonoBehaviour, IDamageable, ICombatantState
             return;
 
         CancelPendingRespawn();
+
+        if (spawnManager != null)
+            spawnManager.RespawnPlayer(transform);
+
         RestoreHealth();
 
         Debug.Log(
