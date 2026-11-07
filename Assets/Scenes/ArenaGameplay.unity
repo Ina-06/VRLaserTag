@@ -270,7 +270,7 @@ MonoBehaviour:
   maxHealth: 100
   respawnDelay: 3
   matchManager: {fileID: 1133399016}
-  spawnManager: {fileID: 0}
+  spawnManager: {fileID: 966491274}
 --- !u!114 &42441437
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2754,7 +2754,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 966491273}
-  - component: {fileID: 966491272}
+  - component: {fileID: 966491274}
   m_Layer: 0
   m_Name: ArenaSpawnManager
   m_TagString: Untagged
@@ -2762,7 +2762,22 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &966491272
+--- !u!4 &966491273
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 966491271}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.94665, y: -0, z: 0.08951}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &966491274
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2780,21 +2795,7 @@ MonoBehaviour:
   - {fileID: 433337694}
   - {fileID: 410747990}
   - {fileID: 191119780}
---- !u!4 &966491273
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 966491271}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.94665, y: -0, z: 0.08951}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  destinationValidator: {fileID: 0}
 --- !u!1 &1016920995
 GameObject:
   m_ObjectHideFlags: 0
@@ -4358,7 +4359,7 @@ MonoBehaviour:
   maxHealth: 100
   respawnDelay: 3
   matchManager: {fileID: 1133399016}
-  spawnManager: {fileID: 966491272}
+  spawnManager: {fileID: 966491274}
 --- !u!114 &2035982489
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4511,6 +4512,58 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
+--- !u!1 &2109544293
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2109544295}
+  - component: {fileID: 2109544294}
+  m_Layer: 0
+  m_Name: ArenaSkySystem
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2109544294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2109544293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0f43c0b19a1d2fe44bf8adcd11e13977, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ArenaSkyDisplay
+  matchManager: {fileID: 1133399016}
+  automaticStart: 1
+  startCountdown: 10
+  skyPosition: {x: 0, y: 12, z: 0}
+  viewerCamera: {fileID: 0}
+  mainFontSize: 20
+  subFontSize: 1
+  textScale: 1
+--- !u!4 &2109544295
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2109544293}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2117172975
 GameObject:
   m_ObjectHideFlags: 0
@@ -4562,3 +4615,4 @@ SceneRoots:
   - {fileID: 1133399017}
   - {fileID: 42441442}
   - {fileID: 966491273}
+  - {fileID: 2109544295}

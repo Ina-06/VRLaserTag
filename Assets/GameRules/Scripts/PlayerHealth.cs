@@ -139,7 +139,7 @@ public class PlayerHealth : MonoBehaviour,
         CancelPendingRespawn();
 
         if (spawnManager != null)
-            spawnManager.RespawnPlayer(transform);
+            spawnManager.MovePlayerToSpawn(transform);
 
         RestoreHealth();
 

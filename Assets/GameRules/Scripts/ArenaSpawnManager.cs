@@ -3,92 +3,111 @@ using UnityEngine;
 
 public class ArenaSpawnManager : MonoBehaviour
 {
-    [Header("Arena Spawn Locations")]
+    [Header("Existing Arena Spawn Points")]
     [SerializeField] private Transform[] spawnPoints;
 
-    private int nextSpawnIndex = 0;
+    [Header("Optional Safety Check")]
+    [SerializeField]
+    private TeleportDestinationValidator destinationValidator;
 
-    public void RespawnPlayer(Transform player)
+    private int nextSpawn;
+
+    public bool MovePlayerToSpawn(Transform player)
     {
-        if (player == null || spawnPoints == null ||
+        if (player == null ||
+            spawnPoints == null ||
             spawnPoints.Length == 0)
         {
             Debug.LogWarning(
-                "ArenaSpawnManager: Missing player or spawn points."
-            );
-            return;
+                "ArenaSpawnManager: Missing player or spawn points.");
+            return false;
         }
 
-        Transform spawn = null;
+        Transform selected = null;
 
+        // Cycle through valid, configured spawn points.
         for (int i = 0; i < spawnPoints.Length; i++)
         {
-            int index =
-                (nextSpawnIndex + i) % spawnPoints.Length;
+            int index = (nextSpawn + i) % spawnPoints.Length;
+            Transform candidate = spawnPoints[index];
 
-            if (spawnPoints[index] != null)
-            {
-                spawn = spawnPoints[index];
-                nextSpawnIndex =
-                    (index + 1) % spawnPoints.Length;
-                break;
-            }
+            if (candidate == null)
+                continue;
+
+            if (destinationValidator != null &&
+                !destinationValidator.IsValidDestination(
+                    candidate.position))
+                continue;
+
+            selected = candidate;
+            nextSpawn = (index + 1) % spawnPoints.Length;
+            break;
         }
 
-        if (spawn == null)
+        if (selected == null)
         {
             Debug.LogWarning(
-                "ArenaSpawnManager: No valid spawn points."
-            );
-            return;
+                "ArenaSpawnManager: No valid spawn point found.");
+            return false;
         }
 
-        // Disable CharacterController temporarily
-        // so it does not block repositioning.
         CharacterController controller =
             player.GetComponent<CharacterController>();
 
-        bool wasEnabled =
+        bool controllerWasEnabled =
             controller != null && controller.enabled;
 
-        if (wasEnabled)
+        if (controllerWasEnabled)
             controller.enabled = false;
 
-        // For XR rigs, preserve the tracked headset's
-        // horizontal offset from the rig root.
-        Camera playerCamera =
+        // XR rigs must move their root, not the
+        // headset camera itself.
+        Camera headCamera =
             player.GetComponentInChildren<Camera>(true);
 
-        if (playerCamera != null)
+        if (headCamera != null)
         {
-            Vector3 cameraOffset =
-                playerCamera.transform.position -
-                player.position;
+            Vector3 headForward = headCamera.transform.forward;
+            headForward.y = 0f;
 
-            float horizontalOffsetX = cameraOffset.x;
-            float horizontalOffsetZ = cameraOffset.z;
+            Vector3 spawnForward = selected.forward;
+            spawnForward.y = 0f;
 
-            player.position = new Vector3(
-                spawn.position.x - horizontalOffsetX,
-                spawn.position.y,
-                spawn.position.z - horizontalOffsetZ
-            );
+            if (headForward.sqrMagnitude > 0.001f &&
+                spawnForward.sqrMagnitude > 0.001f)
+            {
+                float angle = Vector3.SignedAngle(
+                    headForward,
+                    spawnForward,
+                    Vector3.up
+                );
+
+                player.Rotate(Vector3.up, angle, Space.World);
+            }
+
+            // Recalculate after rotation because the
+            // headset may be offset from the rig center.
+            Vector3 headOffset =
+                headCamera.transform.position - player.position;
+
+            headOffset.y = 0f;
+
+            player.position =
+                selected.position - headOffset;
         }
         else
         {
-            player.position = spawn.position;
+            player.SetPositionAndRotation(
+                selected.position, selected.rotation);
         }
 
-        // Align heading with the chosen spawn.
-        // Headset-relative heading will be calibrated
-        // during actual Quest testing.
-        player.rotation = spawn.rotation;
-
-        if (wasEnabled)
+        if (controllerWasEnabled)
             controller.enabled = true;
 
         Debug.Log(
-            $"{player.name} moved to spawn {spawn.name}"
-        );
+            $"ArenaSpawnManager: {player.name} respawned at " +
+            selected.name);
+
+        return true;
     }
 }
