@@ -1,8 +1,10 @@
 
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
+using Unity.Collections;
 
-public class MatchManager : MonoBehaviour
+public class MatchManager : NetworkBehaviour
 {
     public enum MatchState
     {
@@ -18,11 +20,48 @@ public class MatchManager : MonoBehaviour
     private readonly Dictionary<ulong, PlayerScore> players =
         new Dictionary<ulong, PlayerScore>();
 
-    public MatchState CurrentState { get; private set; } =
-        MatchState.Waiting;
+    private readonly NetworkVariable<MatchState> state = new();
+    private readonly NetworkVariable<double> endTime = new();
+    private readonly NetworkVariable<FixedString128Bytes> winnerMessage = new();
+    private MatchState offlineState;
+    private double offlineEndTime;
+    private string offlineWinner = "";
 
-    public float TimeRemaining { get; private set; }
-    public string WinnerMessage { get; private set; } = "";
+    private bool Networked => NetworkObject != null;
+    public bool CanManageMatch => !Networked || (IsSpawned && IsServer);
+    private double Clock => IsSpawned ? NetworkManager.ServerTime.Time : Time.timeAsDouble;
+    public MatchState CurrentState => Networked ? state.Value : offlineState;
+    public float TimeRemaining => CurrentState == MatchState.Waiting ? matchDuration :
+        CurrentState == MatchState.Finished ? 0f :
+        Mathf.Max(0f, (float)((Networked ? endTime.Value : offlineEndTime) - Clock));
+
+    public string WinnerMessage
+    {
+        get => Networked ? winnerMessage.Value.ToString() : offlineWinner;
+        private set
+        {
+            if (Networked) winnerMessage.Value = new FixedString128Bytes(value);
+            else offlineWinner = value;
+        }
+    }
+
+    private void SetState(MatchState value)
+    {
+        if (Networked) state.Value = value;
+        else offlineState = value;
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        if (!IsServer) return;
+        SetState(MatchState.Waiting);
+        WinnerMessage = "";
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        players.Clear();
+    }
 
     public int RegisteredPlayerCount => players.Count;
 
@@ -36,24 +75,17 @@ public class MatchManager : MonoBehaviour
         }
 
         Instance = this;
-        TimeRemaining = matchDuration;
     }
 
     private void Update()
     {
-        if (CurrentState != MatchState.Playing)
-            return;
-
-        TimeRemaining = Mathf.Max(
-            0f, TimeRemaining - Time.deltaTime
-        );
-
-        if (TimeRemaining <= 0f)
+        if (CanManageMatch && CurrentState == MatchState.Playing && TimeRemaining <= 0f)
             EndMatch();
     }
 
     public bool RegisterPlayer(PlayerScore score)
     {
+        if (!CanManageMatch) return false;
         if (score == null)
             return false;
 
@@ -123,6 +155,7 @@ public class MatchManager : MonoBehaviour
     public void ReportElimination(
         ulong attackerId, ulong victimId)
     {
+        if (!CanManageMatch) return;
         if (CurrentState != MatchState.Playing)
             return;
 
@@ -143,14 +176,15 @@ public class MatchManager : MonoBehaviour
     [ContextMenu("Start Match")]
     public void StartMatch()
     {
-        if (CurrentState != MatchState.Waiting)
+        if (!CanManageMatch || CurrentState != MatchState.Waiting)
             return;
 
         ResetAllPlayers();
 
         WinnerMessage = "";
-        TimeRemaining = matchDuration;
-        CurrentState = MatchState.Playing;
+        if (Networked) endTime.Value = Clock + matchDuration;
+        else offlineEndTime = Clock + matchDuration;
+        SetState(MatchState.Playing);
 
         Debug.Log(
             $"Match started with {players.Count} players!"
@@ -159,10 +193,8 @@ public class MatchManager : MonoBehaviour
 
     private void EndMatch()
     {
-        CurrentState = MatchState.Finished;
-        TimeRemaining = 0f;
-
         DetermineWinner();
+        SetState(MatchState.Finished);
 
         Debug.Log("Match finished! " + WinnerMessage);
     }
@@ -196,14 +228,14 @@ public class MatchManager : MonoBehaviour
             WinnerMessage = $"TIE - {highestKills} kills";
         else
             WinnerMessage =
-                $"WINNER: {winner.name} ({highestKills} kills)";
+                $"WINNER: {(Networked ? $"Player {winner.GetComponent<PlayerIdentity>().PlayerId}" : winner.name)} ({highestKills} kills)";
     }
 
     [ContextMenu("Restart Match")]
     public void RestartMatch()
     {
-        CurrentState = MatchState.Waiting;
-        TimeRemaining = matchDuration;
+        if (!CanManageMatch) return;
+        SetState(MatchState.Waiting);
         WinnerMessage = "";
 
         ResetAllPlayers();
@@ -228,9 +260,10 @@ public class MatchManager : MonoBehaviour
         }
     }
 
-    private void OnDestroy()
+    public override void OnDestroy()
     {
         if (Instance == this)
             Instance = null;
+        base.OnDestroy();
     }
 }
