@@ -14,6 +14,11 @@ public class ArenaSpawnManager : MonoBehaviour
 
     public bool MovePlayerToSpawn(Transform player)
     {
+        return MovePlayerToSpawn(player, nextSpawn);
+    }
+
+    public bool MovePlayerToSpawn(Transform player, int startIndex)
+    {
         if (player == null ||
             spawnPoints == null ||
             spawnPoints.Length == 0)
@@ -28,7 +33,7 @@ public class ArenaSpawnManager : MonoBehaviour
         // Cycle through valid, configured spawn points.
         for (int i = 0; i < spawnPoints.Length; i++)
         {
-            int index = (nextSpawn + i) % spawnPoints.Length;
+            int index = (startIndex + i) % spawnPoints.Length;
             Transform candidate = spawnPoints[index];
 
             if (candidate == null)

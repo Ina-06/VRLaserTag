@@ -41,7 +41,7 @@ public class ArenaSkyDisplay : MonoBehaviour
             return;
         }
 
-        if (viewerCamera == null)
+        if (viewerCamera == null || !viewerCamera.isActiveAndEnabled)
             viewerCamera = Camera.main;
 
         CreateSkyText();
@@ -98,7 +98,7 @@ public class ArenaSkyDisplay : MonoBehaviour
         if (matchManager == null || mainText == null || shadowText == null)
             return;
 
-        if (viewerCamera == null)
+        if (viewerCamera == null || !viewerCamera.isActiveAndEnabled)
             viewerCamera = Camera.main;
 
         FaceViewer();
@@ -115,7 +115,9 @@ public class ArenaSkyDisplay : MonoBehaviour
 
         if (state == MatchManager.MatchState.Waiting)
         {
-            if (automaticStart && !countdownRunning && !countdownCompleted)
+            if (automaticStart && matchManager.CanManageMatch &&
+                (!matchManager.IsSpawned || matchManager.RegisteredPlayerCount >= 2) &&
+                !countdownRunning && !countdownCompleted)
             {
                 StartCoroutine(StartSequence());
             }
@@ -176,8 +178,12 @@ public class ArenaSkyDisplay : MonoBehaviour
 
         SetDisplay("GO!", green);
 
-        if (matchManager.CurrentState == MatchManager.MatchState.Waiting)
+        if (matchManager.CanManageMatch &&
+            (!matchManager.IsSpawned || matchManager.RegisteredPlayerCount >= 2) &&
+            matchManager.CurrentState == MatchManager.MatchState.Waiting)
             matchManager.StartMatch();
+        else
+            countdownCompleted = false;
 
         yield return new WaitForSeconds(1f);
 

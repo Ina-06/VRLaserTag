@@ -1,11 +1,13 @@
 
 using System.Collections;
 using UnityEngine;
+using Unity.Netcode;
+using VRLaserTag.Networking;
 using VRLaserTag.Combat;
 
 [RequireComponent(typeof(PlayerIdentity))]
 [RequireComponent(typeof(PlayerScore))]
-public class PlayerHealth : MonoBehaviour,
+public class PlayerHealth : NetworkBehaviour,
     IDamageable, ICombatantState
 {
     [Header("Health Settings")]
@@ -21,8 +23,28 @@ public class PlayerHealth : MonoBehaviour,
     private PlayerIdentity identity;
     private Coroutine respawnCoroutine;
 
-    public int CurrentHealth { get; private set; }
-    public bool IsDead { get; private set; }
+    private readonly NetworkVariable<int> health = new();
+    private int offlineHealth;
+    private bool Networked => NetworkObject != null;
+    private bool CanMutate => !Networked || (IsSpawned && IsServer);
+    public int CurrentHealth => Networked ? health.Value : offlineHealth;
+    public bool IsDead => CurrentHealth <= 0;
+
+    public override void OnNetworkSpawn()
+    {
+        if (IsServer) health.Value = maxHealth;
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        CancelPendingRespawn();
+    }
+
+    private void SetHealth(int value)
+    {
+        if (Networked) health.Value = value;
+        else offlineHealth = value;
+    }
     public bool IsAlive => !IsDead;
 
     public ulong PlayerId =>
@@ -37,8 +59,7 @@ public class PlayerHealth : MonoBehaviour,
     private void Awake()
     {
         identity = GetComponent<PlayerIdentity>();
-        CurrentHealth = maxHealth;
-        IsDead = false;
+        offlineHealth = maxHealth;
     }
 
     private MatchManager GetMatchManager()
@@ -61,6 +82,7 @@ public class PlayerHealth : MonoBehaviour,
 
     public void TakeDamage(int damage, ulong attackerId)
     {
+        if (!CanMutate) return;
         MatchManager manager = GetMatchManager();
 
         if (manager == null ||
@@ -71,9 +93,7 @@ public class PlayerHealth : MonoBehaviour,
         if (IsDead || damage <= 0)
             return;
 
-        CurrentHealth = Mathf.Max(
-            0, CurrentHealth - damage
-        );
+        SetHealth(Mathf.Max(0, CurrentHealth - damage));
 
         Debug.Log(
             $"{name} took {damage} damage. HP: {CurrentHealth}"
@@ -85,11 +105,6 @@ public class PlayerHealth : MonoBehaviour,
 
     private void Die(ulong attackerId)
     {
-        if (IsDead)
-            return;
-
-        IsDead = true;
-
         MatchManager manager = GetMatchManager();
 
         if (manager != null && identity != null)
@@ -126,6 +141,7 @@ public class PlayerHealth : MonoBehaviour,
 
     public void Respawn()
     {
+        if (!CanMutate) return;
         MatchManager manager = GetMatchManager();
 
         if (manager == null ||
@@ -138,7 +154,12 @@ public class PlayerHealth : MonoBehaviour,
 
         CancelPendingRespawn();
 
-        if (spawnManager != null)
+        if (Networked)
+        {
+            var player = GetComponent<NetworkPlayerSetup>();
+            if (player != null) player.RespawnOwner();
+        }
+        else if (spawnManager != null)
             spawnManager.MovePlayerToSpawn(transform);
 
         RestoreHealth();
@@ -150,6 +171,7 @@ public class PlayerHealth : MonoBehaviour,
 
     public void ResetForNewMatch()
     {
+        if (!CanMutate) return;
         CancelPendingRespawn();
         RestoreHealth();
 
@@ -160,8 +182,7 @@ public class PlayerHealth : MonoBehaviour,
 
     private void RestoreHealth()
     {
-        CurrentHealth = maxHealth;
-        IsDead = false;
+        SetHealth(maxHealth);
     }
 
     private void CancelPendingRespawn()
