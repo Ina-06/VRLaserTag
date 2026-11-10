@@ -226,10 +226,10 @@ MonoBehaviour:
     - line: '|   AndroidPreferredInstallLocation: 1'
     - line: '|   AndroidPreferredDataLocation: 1'
     - line: '|   aotOptions: '
-    - line: '|   stripEngineCode: 1'
+    - line: '|   stripEngineCode: 0'
     - line: '|   iPhoneStrippingLevel: 0'
     - line: '|   iPhoneScriptCallOptimization: 0'
-    - line: '|   ForceInternetPermission: 0'
+    - line: '|   ForceInternetPermission: 1'
     - line: '|   ForceSDCardPermission: 0'
     - line: '|   CreateWallpaper: 0'
     - line: '|   androidSplitApplicationBinary: 0'
@@ -570,7 +570,11 @@ MonoBehaviour:
     - line: '|       m_Kind: 1'
     - line: '|       m_SubKind: '
     - line: '|   m_BuildTargetBatching: []'
-    - line: '|   m_BuildTargetShaderSettings: []'
+    - line: '|   m_BuildTargetShaderSettings:'
+    - line: '|   - m_BuildTarget: Android'
+    - line: '|     m_ChunkSizeInMB: 16'
+    - line: '|     m_MaxChunks: 0'
+    - line: '|     m_OverrideDefaultSettings: 0'
     - line: '|   m_BuildTargetGraphicsJobs: []'
     - line: '|   m_BuildTargetGraphicsJobMode: []'
     - line: '|   m_BuildTargetGraphicsAPIs:'
@@ -875,7 +879,9 @@ MonoBehaviour:
     - line: '|   webWasm2023: 1'
     - line: '|   webEnableSubmoduleStrippingCompatibility: 0'
     - line: '|   webProgressiveAssetLoading: 0'
-    - line: '|   scriptingDefineSymbols: {}'
+    - line: '|   scriptingDefineSymbols:'
+    - line: '|     Android: USE_INPUT_SYSTEM_POSE_CONTROL;USE_STICK_CONTROL_THUMBSTICKS'
+    - line: '|     Standalone: USE_INPUT_SYSTEM_POSE_CONTROL;USE_STICK_CONTROL_THUMBSTICKS'
     - line: '|   additionalCompilerArguments: {}'
     - line: '|   platformArchitecture: {}'
     - line: '|   scriptingBackend:'
@@ -1023,7 +1029,7 @@ MonoBehaviour:
         m_DebugSymbolFormat: 5
         m_CurrentDeploymentTargetId: __builtin__target_default
         m_BuildType: 2
-        m_LinkTimeOptimization: 0
+        m_LinkTimeOptimization: 1
         m_BuildAppBundle: 0
         m_ProfileableShell: 0
         m_IPAddressToConnect: 
