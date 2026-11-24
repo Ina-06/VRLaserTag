@@ -1,4 +1,5 @@
 
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
@@ -15,6 +16,11 @@ public class MatchManager : NetworkBehaviour
     }
 
     public static MatchManager Instance { get; private set; }
+
+    // Raised on every headset. Messages for the kill feed (eliminations, joins, leaves, match news).
+    public static event Action<string> FeedMessage;
+    // Raised on every headset for each validated hit: attacker ID, victim ID, whether it killed.
+    public static event Action<ulong, ulong, bool> DamageEvent;
 
     [SerializeField] private float matchDuration = 300f;
 
@@ -82,11 +88,49 @@ public class MatchManager : NetworkBehaviour
         SetState(MatchState.Waiting);
         SetCountdownEnd(0);
         WinnerMessage = "";
+        NetworkManager.OnConnectionEvent += OnConnectionEvent;
     }
 
     public override void OnNetworkDespawn()
     {
+        if (NetworkManager != null)
+            NetworkManager.OnConnectionEvent -= OnConnectionEvent;
         players.Clear();
+    }
+
+    private void OnConnectionEvent(NetworkManager source, ConnectionEventData data)
+    {
+        if (data.EventType == ConnectionEvent.ClientConnected)
+            Announce($"Player {data.ClientId + 1} joined");
+        else if (data.EventType == ConnectionEvent.ClientDisconnected)
+            Announce($"Player {data.ClientId + 1} disconnected");
+    }
+
+    // Host only: sends a kill-feed line to every headset.
+    private void Announce(string message)
+    {
+        if (IsSpawned && IsServer) FeedRpc(new FixedString128Bytes(message));
+        else if (!IsSpawned) FeedMessage?.Invoke(message);
+    }
+
+    [Rpc(SendTo.Everyone, InvokePermission = RpcInvokePermission.Server)]
+    private void FeedRpc(FixedString128Bytes message)
+    {
+        FeedMessage?.Invoke(message.ToString());
+    }
+
+    // Host only: called by PlayerHealth after a validated hit lands.
+    public void ReportHit(ulong attackerId, ulong victimId, bool killed)
+    {
+        if (!CanManageMatch) return;
+        if (IsSpawned) DamageEventRpc(attackerId, victimId, killed);
+        else DamageEvent?.Invoke(attackerId, victimId, killed);
+    }
+
+    [Rpc(SendTo.Everyone, InvokePermission = RpcInvokePermission.Server)]
+    private void DamageEventRpc(ulong attackerId, ulong victimId, bool killed)
+    {
+        DamageEvent?.Invoke(attackerId, victimId, killed);
     }
 
     public int RegisteredPlayerCount => players.Count;
@@ -222,6 +266,11 @@ public class MatchManager : NetworkBehaviour
                 out PlayerScore attacker))
         {
             attacker.AddKill();
+            Announce($"Player {attackerId} eliminated Player {victimId}");
+        }
+        else
+        {
+            Announce($"Player {victimId} was eliminated");
         }
     }
 
@@ -239,6 +288,7 @@ public class MatchManager : NetworkBehaviour
         if (Networked) endTime.Value = Clock + matchDuration;
         else offlineEndTime = Clock + matchDuration;
         SetState(MatchState.Playing);
+        Announce("Match started!");
 
         Debug.Log(
             $"Match started with {players.Count} players!"
@@ -250,6 +300,7 @@ public class MatchManager : NetworkBehaviour
         DetermineWinner();
         finishedAt = Clock;
         SetState(MatchState.Finished);
+        Announce(string.IsNullOrEmpty(WinnerMessage) ? "Match over" : WinnerMessage);
 
         Debug.Log("Match finished! " + WinnerMessage);
     }
@@ -296,6 +347,7 @@ public class MatchManager : NetworkBehaviour
 
         ResetAllPlayers();
         SendPlayersToSpawns();
+        Announce("Back to the lobby");
 
         Debug.Log("Match reset. Players returned to spawns.");
     }
