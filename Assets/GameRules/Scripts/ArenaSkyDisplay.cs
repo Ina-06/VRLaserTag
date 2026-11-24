@@ -1,4 +1,3 @@
-using System.Collections;
 using TMPro;
 using UnityEngine;
 
@@ -6,7 +5,8 @@ public class ArenaSkyDisplay : MonoBehaviour
 {
     [Header("Match")]
     [SerializeField] private MatchManager matchManager;
-    [SerializeField] private bool automaticStart = true;
+    [Tooltip("Start the countdown by itself once two players are in. Off = host presses START MATCH.")]
+    [SerializeField] private bool automaticStart = false;
     [SerializeField] private int startCountdown = 3;
 
     [Header("Sky Position")]
@@ -20,9 +20,6 @@ public class ArenaSkyDisplay : MonoBehaviour
 
     private TextMeshPro mainText;
     private TextMeshPro shadowText;
-    private bool countdownRunning;
-    private bool countdownCompleted;
-    private MatchManager.MatchState previousState;
 
     private readonly Color cyan = new Color(0.00f, 0.95f, 1.00f);
     private readonly Color red = new Color(1.00f, 0.20f, 0.25f);
@@ -45,7 +42,6 @@ public class ArenaSkyDisplay : MonoBehaviour
             viewerCamera = Camera.main;
 
         CreateSkyText();
-        previousState = matchManager.CurrentState;
 
         Debug.Log("ArenaSkyDisplay initialized.");
     }
@@ -105,32 +101,32 @@ public class ArenaSkyDisplay : MonoBehaviour
 
         MatchManager.MatchState state = matchManager.CurrentState;
 
-        if (state == MatchManager.MatchState.Waiting &&
-            previousState != MatchManager.MatchState.Waiting)
-        {
-            countdownCompleted = false;
-        }
-
-        previousState = state;
-
         if (state == MatchManager.MatchState.Waiting)
         {
-            if (automaticStart && matchManager.CanManageMatch &&
-                (!matchManager.IsSpawned || matchManager.RegisteredPlayerCount >= 2) &&
-                !countdownRunning && !countdownCompleted)
+            if (matchManager.CountdownActive)
             {
-                StartCoroutine(StartSequence());
-            }
-            else if (!countdownRunning)
-            {
-                SetDisplay("ARENA\nREADY", cyan);
+                int seconds = Mathf.Max(1, Mathf.CeilToInt(matchManager.CountdownRemaining));
+                SetDisplay(seconds.ToString(), seconds <= 3 ? red : cyan);
+                return;
             }
 
+            // Optional hands-free start; the scene uses the LAN panel's START MATCH button instead.
+            if (automaticStart)
+                matchManager.BeginCountdown(startCountdown);
+
+            SetDisplay("ARENA\nREADY", cyan);
             return;
         }
 
         if (state == MatchManager.MatchState.Playing)
         {
+            float elapsed = matchManager.MatchDuration - matchManager.TimeRemaining;
+            if (elapsed < 1.5f)
+            {
+                SetDisplay("GO!", green);
+                return;
+            }
+
             int seconds = Mathf.CeilToInt(Mathf.Max(0f, matchManager.TimeRemaining));
 
             if (seconds <= 10)
@@ -157,37 +153,6 @@ public class ArenaSkyDisplay : MonoBehaviour
 
             SetDisplay("MATCH FINISHED\n" + winner, green);
         }
-    }
-
-    private IEnumerator StartSequence()
-    {
-        countdownRunning = true;
-        countdownCompleted = true;
-
-        for (int i = Mathf.Max(1, startCountdown); i > 0; i--)
-        {
-            if (matchManager.CurrentState != MatchManager.MatchState.Waiting)
-            {
-                countdownRunning = false;
-                yield break;
-            }
-
-            SetDisplay(i.ToString(), i == 1 ? red : cyan);
-            yield return new WaitForSeconds(1f);
-        }
-
-        SetDisplay("GO!", green);
-
-        if (matchManager.CanManageMatch &&
-            (!matchManager.IsSpawned || matchManager.RegisteredPlayerCount >= 2) &&
-            matchManager.CurrentState == MatchManager.MatchState.Waiting)
-            matchManager.StartMatch();
-        else
-            countdownCompleted = false;
-
-        yield return new WaitForSeconds(1f);
-
-        countdownRunning = false;
     }
 
     private void SetDisplay(string message, Color color)

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Unity.Netcode;
 using Unity.Collections;
+using VRLaserTag.Networking;
 
 public class MatchManager : NetworkBehaviour
 {
@@ -17,14 +18,21 @@ public class MatchManager : NetworkBehaviour
 
     [SerializeField] private float matchDuration = 300f;
 
+    [Tooltip("Seconds the winner stays on screen before everyone returns to the lobby.")]
+    [SerializeField] private float resultsDuration = 8f;
+
     private readonly Dictionary<ulong, PlayerScore> players =
         new Dictionary<ulong, PlayerScore>();
 
     private readonly NetworkVariable<MatchState> state = new();
     private readonly NetworkVariable<double> endTime = new();
     private readonly NetworkVariable<FixedString128Bytes> winnerMessage = new();
+    // Server time at which a pending start countdown finishes; 0 = no countdown.
+    private readonly NetworkVariable<double> countdownEnd = new();
     private MatchState offlineState;
     private double offlineEndTime;
+    private double offlineCountdownEnd;
+    private double finishedAt;
     private string offlineWinner = "";
 
     private bool Networked => NetworkObject != null;
@@ -34,6 +42,17 @@ public class MatchManager : NetworkBehaviour
     public float TimeRemaining => CurrentState == MatchState.Waiting ? matchDuration :
         CurrentState == MatchState.Finished ? 0f :
         Mathf.Max(0f, (float)((Networked ? endTime.Value : offlineEndTime) - Clock));
+
+    public float MatchDuration => matchDuration;
+    private double CountdownEndValue => Networked ? countdownEnd.Value : offlineCountdownEnd;
+    public bool CountdownActive => CurrentState == MatchState.Waiting && CountdownEndValue > 0;
+    public float CountdownRemaining =>
+        CountdownActive ? Mathf.Max(0f, (float)(CountdownEndValue - Clock)) : 0f;
+    private bool EnoughPlayers => !IsSpawned || players.Count >= 2;
+
+    // True on the host while waiting with at least two players and no countdown running.
+    public bool CanStartCountdown =>
+        CanManageMatch && CurrentState == MatchState.Waiting && !CountdownActive && EnoughPlayers;
 
     public string WinnerMessage
     {
@@ -51,10 +70,17 @@ public class MatchManager : NetworkBehaviour
         else offlineState = value;
     }
 
+    private void SetCountdownEnd(double value)
+    {
+        if (Networked) countdownEnd.Value = value;
+        else offlineCountdownEnd = value;
+    }
+
     public override void OnNetworkSpawn()
     {
         if (!IsServer) return;
         SetState(MatchState.Waiting);
+        SetCountdownEnd(0);
         WinnerMessage = "";
     }
 
@@ -79,8 +105,34 @@ public class MatchManager : NetworkBehaviour
 
     private void Update()
     {
-        if (CanManageMatch && CurrentState == MatchState.Playing && TimeRemaining <= 0f)
-            EndMatch();
+        if (!CanManageMatch) return;
+
+        switch (CurrentState)
+        {
+            case MatchState.Waiting:
+                if (CountdownEndValue <= 0) break;
+                if (!EnoughPlayers) SetCountdownEnd(0); // someone left during the countdown
+                else if (Clock >= CountdownEndValue) StartMatch();
+                break;
+
+            case MatchState.Playing:
+                if (TimeRemaining <= 0f) EndMatch();
+                break;
+
+            case MatchState.Finished:
+                if (resultsDuration >= 0f && Clock - finishedAt >= resultsDuration)
+                    RestartMatch();
+                break;
+        }
+    }
+
+    // Host only: starts the shared pre-match countdown shown on every headset.
+    public bool BeginCountdown(float seconds)
+    {
+        if (!CanStartCountdown) return false;
+        SetCountdownEnd(Clock + Mathf.Max(0f, seconds));
+        Debug.Log($"Match countdown started ({seconds:0} s).");
+        return true;
     }
 
     public bool RegisterPlayer(PlayerScore score)
@@ -180,7 +232,9 @@ public class MatchManager : NetworkBehaviour
             return;
 
         ResetAllPlayers();
+        SendPlayersToSpawns();
 
+        SetCountdownEnd(0);
         WinnerMessage = "";
         if (Networked) endTime.Value = Clock + matchDuration;
         else offlineEndTime = Clock + matchDuration;
@@ -194,6 +248,7 @@ public class MatchManager : NetworkBehaviour
     private void EndMatch()
     {
         DetermineWinner();
+        finishedAt = Clock;
         SetState(MatchState.Finished);
 
         Debug.Log("Match finished! " + WinnerMessage);
@@ -235,12 +290,28 @@ public class MatchManager : NetworkBehaviour
     public void RestartMatch()
     {
         if (!CanManageMatch) return;
+        SetCountdownEnd(0);
         SetState(MatchState.Waiting);
         WinnerMessage = "";
 
         ResetAllPlayers();
+        SendPlayersToSpawns();
 
-        Debug.Log("Match reset. Players restored.");
+        Debug.Log("Match reset. Players returned to spawns.");
+    }
+
+    // Moves every player back to an arena spawn point (each owner moves its own rig).
+    private void SendPlayersToSpawns()
+    {
+        foreach (PlayerScore score in players.Values)
+        {
+            if (score == null)
+                continue;
+
+            NetworkPlayerSetup setup = score.GetComponent<NetworkPlayerSetup>();
+            if (setup != null)
+                setup.RespawnOwner();
+        }
     }
 
     private void ResetAllPlayers()
