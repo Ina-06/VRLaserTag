@@ -15,6 +15,9 @@ namespace VRLaserTag.Networking
         private UnityEngine.UI.Button hostButton;
         private UnityEngine.UI.Button joinButton;
         private UnityEngine.UI.Button stopButton;
+        private UnityEngine.UI.Button startMatchButton;
+        [Tooltip("Seconds counted down on every headset after the host presses START MATCH.")]
+        [SerializeField] private float startCountdown = 10f;
         private readonly System.Collections.Generic.List<UnityEngine.UI.Button> editButtons = new();
         private GameObject canvasObject;
         private float nextRefresh;
@@ -78,18 +81,41 @@ namespace VRLaserTag.Networking
                     () => EditAddress(key));
                 editButtons.Add(button);
             }
-            editButtons.Add(Button(panel, "Clear IP", 0, -114, 455, 40, () => session.HostAddress = ""));
+            editButtons.Add(Button(panel, "Clear IP", -117, -114, 221, 40, () => session.HostAddress = ""));
+            startMatchButton = Button(panel, "START MATCH", 117, -114, 221, 40, StartMatch);
             hostButton = Button(panel, "HOST", -155, -170, 145, 50, session.StartHost);
             joinButton = Button(panel, "JOIN", 0, -170, 145, 50, session.JoinHost);
             stopButton = Button(panel, "STOP", 155, -170, 145, 50, session.StopSession);
-            statusText = Label(panel, "", 0, -238, 490, 76, 19);
+            statusText = Label(panel, "", 0, -246, 490, 92, 18);
             Button(canvasRect, "LAN Menu", 0, -304, 180, 32,
                 () => panel.gameObject.SetActive(!panel.gameObject.activeSelf));
             Refresh();
         }
 
+        // Host only: begins the shared countdown, after which MatchManager starts the match.
+        private void StartMatch()
+        {
+            MatchManager match = MatchManager.Instance;
+            if (match != null) match.BeginCountdown(startCountdown);
+            Refresh();
+        }
+
+        // The menu is shown while offline and between matches, and hidden while a match runs
+        // or its winner is on screen. MatchManager returns everyone to the lobby afterwards.
+        private static bool MenuVisible
+        {
+            get
+            {
+                MatchManager match = MatchManager.Instance;
+                return match == null || !match.IsSpawned ||
+                       match.CurrentState == MatchManager.MatchState.Waiting;
+            }
+        }
+
         private void LateUpdate()
         {
+            if (canvasObject != null && canvasObject.activeSelf != MenuVisible)
+                canvasObject.SetActive(MenuVisible);
             if (worldCanvas == null) return;
             Camera camera = Camera.main;
             worldCanvas.enabled = camera != null;
@@ -109,10 +135,23 @@ namespace VRLaserTag.Networking
         private void Refresh()
         {
             addressText.text = "Host IP: " + session.HostAddress;
-            statusText.text = session.Status + (session.IsHost ? $"\nConnected: {session.ConnectedCount} (including host)" : "");
+            statusText.text = session.Status + (session.IsHost ? $"\nConnected: {session.ConnectedCount} (including host)" : "")
+                + MatchLine();
+            MatchManager match = MatchManager.Instance;
+            startMatchButton.interactable = session.IsHost && match != null && match.CanStartCountdown;
             hostButton.interactable = joinButton.interactable = session.CanStart;
             stopButton.interactable = session.CanStop;
             foreach (var button in editButtons) button.interactable = session.CanStart;
+        }
+
+        private string MatchLine()
+        {
+            MatchManager match = MatchManager.Instance;
+            if (match == null || !match.IsSpawned) return "";
+            if (match.CountdownActive) return $"\nMatch starts in {Mathf.CeilToInt(match.CountdownRemaining)}...";
+            if (session.IsHost)
+                return match.CanStartCountdown ? "\nPress START MATCH when everyone is in." : "\nWaiting for a 2nd player...";
+            return "\nWaiting for the host to start the match.";
         }
 
         private void EditAddress(string key)

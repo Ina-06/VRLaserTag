@@ -51,6 +51,12 @@ namespace VRLaserTag.Combat
                 effects = GetComponent<WeaponEffects>();
             }
 
+            // Replace the placeholder cube with the blaster model (visual only).
+            if (GetComponent<LaserGunModel>() == null)
+            {
+                gameObject.AddComponent<LaserGunModel>();
+            }
+
             combatantState = combatantStateSource as ICombatantState;
             if (combatantStateSource != null && combatantState == null)
             {

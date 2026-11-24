@@ -4834,7 +4834,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArenaSkyDisplay
   matchManager: {fileID: 1133399016}
-  automaticStart: 1
+  automaticStart: 0
   startCountdown: 10
   skyPosition: {x: 0, y: 12, z: 0}
   viewerCamera: {fileID: 0}

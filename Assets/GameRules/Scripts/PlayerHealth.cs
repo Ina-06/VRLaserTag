@@ -46,6 +46,8 @@ public class PlayerHealth : NetworkBehaviour,
         else offlineHealth = value;
     }
     public bool IsAlive => !IsDead;
+    public int MaxHealth => maxHealth;
+    public float RespawnDelay => respawnDelay;
 
     public ulong PlayerId =>
         identity != null ? identity.PlayerId : 0UL;
@@ -94,6 +96,7 @@ public class PlayerHealth : NetworkBehaviour,
             return;
 
         SetHealth(Mathf.Max(0, CurrentHealth - damage));
+        manager.ReportHit(attackerId, PlayerId, CurrentHealth == 0);
 
         Debug.Log(
             $"{name} took {damage} damage. HP: {CurrentHealth}"
